@@ -112,7 +112,36 @@ function attachEventListeners() {
       setTimeout(() => {
         btn.disabled = false;
         btn.innerHTML = '⚡ Run Scan';
-        showToast('Vulnerability scan completed. 0 new critical threats found.', 'success');
+        const currentVulns = store.get('vulnerabilities') || [];
+        const newCount = Math.random() > 0.4 ? 2 : 1;
+        const scanFindings = [
+          {
+            id: `vuln-scan-${Date.now()}-1`,
+            cveId: `CVE-2025-${Math.floor(20000 + Math.random() * 79999)}`,
+            severity: 'Critical',
+            cvssScore: '9.4',
+            host: '192.168.1.10',
+            service: 'OpenSSH',
+            description: 'Unauthenticated remote code execution discovered during active deep packet and service banner scan.',
+            remediation: 'Apply upstream security patch immediately and restrict SSH access to management VLAN.',
+            status: 'Open',
+            discoveredDate: new Date()
+          },
+          {
+            id: `vuln-scan-${Date.now()}-2`,
+            cveId: `CVE-2025-${Math.floor(20000 + Math.random() * 79999)}`,
+            severity: 'High',
+            cvssScore: '7.8',
+            host: '192.168.1.15',
+            service: 'Nginx',
+            description: 'TLS session ticket key reuse and HTTP/2 header table decompression amplification detected.',
+            remediation: 'Rotate TLS session ticket keys and update Nginx configuration.',
+            status: 'Open',
+            discoveredDate: new Date()
+          }
+        ].slice(0, newCount);
+        store.set('vulnerabilities', [...scanFindings, ...currentVulns]);
+        showToast(`Vulnerability scan completed. ${newCount} new ${newCount === 1 ? 'vulnerability' : 'vulnerabilities'} discovered.`, 'warning');
       }, 1500);
     });
   }
@@ -123,14 +152,16 @@ window.vulnAction = (id, status, e) => {
   const vulns = [...(store.get('vulnerabilities') || [])];
   const idx = vulns.findIndex(v => v.id == id);
   if (idx > -1) {
-    vulns[idx].status = status;
+    const normalizedStatus = status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : 'Open';
+    vulns[idx] = { ...vulns[idx], status: normalizedStatus };
     store.set('vulnerabilities', vulns);
-    showToast(`Vulnerability ${vulns[idx].cveId} marked as ${status}`, status === 'Patched' ? 'success' : 'info');
+    showToast(`Vulnerability ${vulns[idx].cveId} marked as ${normalizedStatus}`, normalizedStatus.toLowerCase() === 'patched' ? 'success' : 'info');
   }
 };
 
 function showVulnDetails(v) {
   if (!v) return;
+  const isOpen = (v.status || '').toLowerCase() === 'open';
 
   const content = `
     <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -157,7 +188,7 @@ function showVulnDetails(v) {
     body: content,
     actions: [
       { label: 'Close', class: 'btn-secondary', onClick: () => {} },
-      v.status === 'Open' ? {
+      isOpen ? {
         label: 'Mark as Patched',
         class: 'btn-primary',
         onClick: () => window.vulnAction(v.id, 'Patched')
@@ -171,9 +202,9 @@ function updateView() {
   
   // Update stats
   const total = vulns.length;
-  const critical = vulns.filter(v => (v.severity || '').toLowerCase() === 'critical' && v.status === 'Open').length;
-  const open = vulns.filter(v => v.status === 'Open').length;
-  const patched = vulns.filter(v => v.status === 'Patched').length;
+  const critical = vulns.filter(v => (v.severity || '').toLowerCase() === 'critical' && (v.status || '').toLowerCase() === 'open').length;
+  const open = vulns.filter(v => (v.status || '').toLowerCase() === 'open').length;
+  const patched = vulns.filter(v => (v.status || '').toLowerCase() === 'patched').length;
 
   const statsContainer = document.getElementById('vuln-stats');
   if (statsContainer) {
@@ -202,7 +233,7 @@ function updateView() {
   const hosts = {};
   
   vulns.forEach(v => {
-    if (v.status === 'Open') {
+    if ((v.status || '').toLowerCase() === 'open') {
       const sev = (v.severity || '').toLowerCase();
       if (severities[sev] !== undefined) severities[sev]++;
       if (v.host) hosts[v.host] = (hosts[v.host] || 0) + 1;
@@ -244,10 +275,10 @@ function updateView() {
     { key: 'severity', label: 'Severity', format: (v, item) => `<span class="badge badge-${(v || 'info').toLowerCase()}">${v} (${item.cvssScore || '0'})</span>` },
     { key: 'host', label: 'Host' },
     { key: 'service', label: 'Service' },
-    { key: 'status', label: 'Status', format: v => `<span class="badge ${v === 'Patched' ? 'badge-low' : 'badge-high'}">${v}</span>` },
+    { key: 'status', label: 'Status', format: v => `<span class="badge ${(v || '').toLowerCase() === 'patched' ? 'badge-low' : 'badge-high'}">${v}</span>` },
     { key: 'discoveredDate', label: 'Discovered', format: v => v ? new Date(v).toLocaleDateString() : 'N/A' },
     { key: 'actions', label: 'Actions', format: (_, item) => 
-      item.status === 'Open' ? 
+      (item.status || '').toLowerCase() === 'open' ? 
       `<div style="display:flex; gap:0.25rem;">
         <button class="btn btn-sm btn-secondary" onclick="window.vulnAction('${item.id}', 'Patched', event)">Patch</button>
         <button class="btn btn-sm btn-secondary" onclick="window.vulnAction('${item.id}', 'Accepted', event)">Accept</button>

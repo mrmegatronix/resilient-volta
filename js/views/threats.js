@@ -128,8 +128,9 @@ function updateStats() {
 function renderTable() {
   let filtered = threatsData;
   if (!activeFilters.has('All')) {
+    const lowerFilters = new Set(Array.from(activeFilters, f => (f || '').toLowerCase()));
     filtered = threatsData.filter(t => 
-      activeFilters.has(t.severity) || activeFilters.has(t.type)
+      lowerFilters.has((t.severity || '').toLowerCase()) || lowerFilters.has((t.type || '').toLowerCase())
     );
   }
 

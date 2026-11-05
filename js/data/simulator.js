@@ -24,10 +24,10 @@ export function generateTrafficData(hours = 24) {
 
 const threatTypes = ['Malware', 'DDoS', 'Phishing', 'Brute Force', 'Port Scan', 'SQL Injection'];
 const severities = [
-  { level: 'critical', weight: 5 },
-  { level: 'high', weight: 15 },
-  { level: 'medium', weight: 40 },
-  { level: 'low', weight: 40 }
+  { level: 'Critical', weight: 5 },
+  { level: 'High', weight: 15 },
+  { level: 'Medium', weight: 40 },
+  { level: 'Low', weight: 40 }
 ];
 const countries = [
   { name: 'Russia', flag: '🇷🇺' },
@@ -158,17 +158,29 @@ export function generateLogEntries(count = 200) {
 
 export function generateVulnerabilities(count = 15) {
   const vulns = [];
+  const vulnHosts = ['192.168.1.1', '192.168.1.2', '192.168.1.4', '192.168.1.10', '192.168.1.15', '192.168.1.20', '192.168.1.25'];
+  const vulnTemplates = [
+    { service: 'OpenSSH', description: 'Remote code execution vulnerability in sshd signal handler race condition (regreSSHion).', remediation: 'Upgrade OpenSSH to version 9.8p1 or later immediately.' },
+    { service: 'Nginx', description: 'HTTP/2 rapid reset DDoS and worker process memory corruption in request parsing.', remediation: 'Update Nginx to 1.26.1+ and restrict concurrent HTTP/2 streams.' },
+    { service: 'Apache', description: 'Path traversal and arbitrary file disclosure in mod_rewrite CGI handler.', remediation: 'Upgrade Apache HTTP Server to 2.4.60+ and audit rewrite rules.' },
+    { service: 'Samba', description: 'Out-of-bounds heap read/write in SMB2 packet signing allowing privilege escalation.', remediation: 'Patch Samba packages and enforce SMB3 encryption on all shares.' },
+    { service: 'Docker', description: 'Container escape via runc file descriptor leak in mount namespace initialization.', remediation: 'Upgrade runc to 1.1.12+ and Docker Engine to 26.1+.' }
+  ];
   for (let i = 0; i < count; i++) {
+    const tpl = vulnTemplates[i % vulnTemplates.length];
+    const severity = ['Critical', 'High', 'Medium', 'Low'][Math.floor(Math.random() * 4)];
+    const scoreRanges = { Critical: [9.0, 10.0], High: [7.0, 8.9], Medium: [4.0, 6.9], Low: [1.0, 3.9] };
+    const [minS, maxS] = scoreRanges[severity];
     vulns.push({
       id: `vuln-${i}`,
       cveId: `CVE-2024-${Math.floor(10000 + Math.random() * 90000)}`,
-      severity: ['critical', 'high', 'medium', 'low'][Math.floor(Math.random() * 4)],
-      cvssScore: (Math.random() * 10).toFixed(1),
-      host: `192.168.1.${Math.floor(Math.random() * 200)}`,
-      service: ['OpenSSH', 'Nginx', 'Apache', 'Samba', 'Docker'][Math.floor(Math.random() * 5)],
-      description: 'Remote code execution vulnerability exists due to improper bounds checking.',
-      remediation: 'Upgrade to the latest version immediately.',
-      status: ['open', 'patched', 'accepted'][Math.floor(Math.random() * 3)],
+      severity,
+      cvssScore: (minS + Math.random() * (maxS - minS)).toFixed(1),
+      host: vulnHosts[i % vulnHosts.length],
+      service: tpl.service,
+      description: tpl.description,
+      remediation: tpl.remediation,
+      status: ['Open', 'Patched', 'Accepted'][Math.floor(Math.random() * 3)],
       discoveredDate: new Date(Date.now() - Math.random() * 30 * 86400000)
     });
   }
@@ -197,6 +209,7 @@ export function startLiveSimulation(store) {
   store.set('metrics', generateSystemMetrics());
   
   setInterval(() => {
+    if (window.__cybershieldPaused || window.__cybershieldFrozen) return;
     store.update('logs', logs => {
       const newLog = generateLogEntries(1)[0];
       newLog.timestamp = new Date();
@@ -205,6 +218,7 @@ export function startLiveSimulation(store) {
   }, 3000);
   
   setInterval(() => {
+    if (window.__cybershieldPaused || window.__cybershieldFrozen) return;
     store.update('metrics', metrics => {
       return {
         ...metrics,
@@ -216,6 +230,7 @@ export function startLiveSimulation(store) {
   }, 5000);
   
   setInterval(() => {
+    if (window.__cybershieldPaused || window.__cybershieldFrozen) return;
     store.update('traffic', traffic => {
       const newTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       return {
@@ -227,6 +242,7 @@ export function startLiveSimulation(store) {
   }, 10000);
   
   setInterval(() => {
+    if (window.__cybershieldPaused || window.__cybershieldFrozen) return;
     store.update('devices', devices => {
       const idx = Math.floor(Math.random() * devices.length);
       const newDevices = [...devices];
@@ -236,15 +252,17 @@ export function startLiveSimulation(store) {
   }, 15000);
   
   setInterval(() => {
+    if (window.__cybershieldPaused || window.__cybershieldFrozen) return;
     store.update('threats', threats => {
       const newThreat = generateThreatEvents(1)[0];
       newThreat.timestamp = new Date();
       
-      if (newThreat.severity === 'critical' || newThreat.severity === 'high') {
+      const sevLower = (newThreat.severity || '').toLowerCase();
+      if (sevLower === 'critical' || sevLower === 'high') {
         import('../components/toast.js').then(({ showToast }) => {
           showToast({
             message: `New ${newThreat.severity} threat: ${newThreat.type} from ${newThreat.sourceCountry}`,
-            severity: newThreat.severity,
+            severity: sevLower,
             duration: 5000
           });
         });

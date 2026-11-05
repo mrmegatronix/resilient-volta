@@ -4,6 +4,7 @@ import { createNetworkGraph } from '../components/network-graph.js';
 let subscriptions = [];
 let networkGraphInstance = null;
 let currentFilter = 'All Devices';
+let currentRiskFilter = 'All';
 
 export function render(container) {
   container.innerHTML = `
@@ -24,10 +25,11 @@ export function render(container) {
         </div>
       </div>
       
-      <div class="filter-bar">
-        <span class="filter-chip active"><span class="status-dot status-online"></span> Low Risk</span>
-        <span class="filter-chip"><span class="status-dot" style="background:var(--accent-orange)"></span> Medium Risk</span>
-        <span class="filter-chip"><span class="status-dot" style="background:var(--accent-red)"></span> High Risk</span>
+      <div class="filter-bar" id="network-risk-filters">
+        <span class="filter-chip ${currentRiskFilter === 'All' ? 'active' : ''}" data-risk="All">All Risks</span>
+        <span class="filter-chip ${currentRiskFilter === 'Low' ? 'active' : ''}" data-risk="Low"><span class="status-dot status-online"></span> Low Risk</span>
+        <span class="filter-chip ${currentRiskFilter === 'Medium' ? 'active' : ''}" data-risk="Medium"><span class="status-dot" style="background:var(--accent-orange)"></span> Medium Risk</span>
+        <span class="filter-chip ${currentRiskFilter === 'High' ? 'active' : ''}" data-risk="High"><span class="status-dot" style="background:var(--accent-red)"></span> High Risk</span>
       </div>
       
       <div class="glass-card" style="padding:0;overflow:hidden;height:calc(100vh - 240px);position:relative;">
@@ -76,6 +78,21 @@ function bindEvents(container) {
     });
   }
 
+  const riskChips = container.querySelectorAll('#network-risk-filters .filter-chip[data-risk]');
+  riskChips.forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      const targetChip = e.currentTarget;
+      const risk = targetChip.dataset.risk;
+      if (currentRiskFilter === risk && risk !== 'All') {
+        currentRiskFilter = 'All';
+      } else {
+        currentRiskFilter = risk;
+      }
+      riskChips.forEach(c => c.classList.toggle('active', c.dataset.risk === currentRiskFilter));
+      updateNetwork(store.get('devices') || []);
+    });
+  });
+
   const refreshBtn = container.querySelector('#refresh-network-btn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
@@ -97,6 +114,15 @@ function updateNetwork(devices) {
   let filtered = devices || [];
   if (currentFilter !== 'All Devices') {
     filtered = filtered.filter(d => (d.type || '').toLowerCase() === currentFilter.toLowerCase());
+  }
+  if (currentRiskFilter !== 'All') {
+    filtered = filtered.filter(d => {
+      const score = Number(d.riskScore) || 0;
+      if (currentRiskFilter === 'Low') return score <= 30;
+      if (currentRiskFilter === 'Medium') return score > 30 && score <= 75;
+      if (currentRiskFilter === 'High') return score > 75;
+      return true;
+    });
   }
   
   networkGraphInstance.setData(filtered);

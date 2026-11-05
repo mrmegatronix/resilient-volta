@@ -201,9 +201,50 @@ function showNotificationsModal() {
   });
 }
 
+const routeList = ['dashboard', 'network', 'threats', 'firewall', 'logs', 'vulnerabilities', 'devices', 'settings'];
+
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const elHH = document.getElementById('clock-hh');
+  const elMM = document.getElementById('clock-mm');
+  const elSS = document.getElementById('clock-ss');
+  if (elHH) elHH.textContent = hh;
+  if (elMM) elMM.textContent = mm;
+  if (elSS) elSS.textContent = ss;
+}
+
+function updateNotificationBadge(threats) {
+  const badge = document.querySelector('.notification-badge');
+  if (!badge) return;
+  const list = Array.isArray(threats) ? threats : (store.get('threats') || []);
+  const count = list.filter(t => {
+    const sev = (t.severity || '').toLowerCase();
+    return sev === 'critical' || sev === 'high';
+  }).length;
+  badge.textContent = String(count);
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
 function initApp() {
+  // Apply saved theme on boot
+  const savedTheme = localStorage.getItem('cybershield_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  // Start header live clock
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Subscribe to threats for notification badge updates
+  store.subscribe('threats', (threats) => {
+    updateNotificationBadge(threats);
+  });
+
   // Start simulator first to populate store state
   startLiveSimulation(store);
+  updateNotificationBadge(store.get('threats'));
 
   // Setup router
   window.addEventListener('hashchange', handleRoute);
@@ -258,6 +299,40 @@ function initApp() {
       showNotificationsModal();
     });
   }
+
+  // Global keyboard navigation shortcuts
+  window.addEventListener('keydown', (e) => {
+    const activeTag = document.activeElement?.tagName;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    const currentIdx = Math.max(0, routeList.indexOf(currentRoute || 'dashboard'));
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (window.__cybershieldFrozen) return;
+      const prevIdx = (currentIdx - 1 + routeList.length) % routeList.length;
+      window.location.hash = `#/${routeList[prevIdx]}`;
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (window.__cybershieldFrozen) return;
+      const nextIdx = (currentIdx + 1) % routeList.length;
+      window.location.hash = `#/${routeList[nextIdx]}`;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (window.__cybershieldFrozen) return;
+      window.location.hash = `#/${routeList[0]}`;
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      window.__cybershieldPaused = !window.__cybershieldPaused;
+      showToast(window.__cybershieldPaused ? 'Live simulation paused' : 'Live simulation resumed', 'info');
+    } else if (e.key === '0') {
+      e.preventDefault();
+      window.__cybershieldFrozen = !window.__cybershieldFrozen;
+      showToast(window.__cybershieldFrozen ? 'Navigation freeze lock enabled' : 'Navigation freeze lock disabled', 'info');
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initApp);

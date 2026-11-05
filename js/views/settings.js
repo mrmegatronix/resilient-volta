@@ -1,7 +1,13 @@
 import { showToast } from '../components/toast.js';
 import { confirmModal } from '../components/modal.js';
 
+let currentContainer = null;
+let cleanupFns = [];
+
 export function render(container) {
+  currentContainer = container;
+  cleanupFns = [];
+
   container.innerHTML = `
     <style>
       .toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; }
@@ -143,56 +149,97 @@ export function render(container) {
     </section>
   `;
 
-  loadSettings();
-  attachEventListeners();
+  loadSettings(container);
+  attachEventListeners(container);
 }
 
-export function destroy() {}
+export function destroy() {
+  cleanupFns.forEach(fn => fn());
+  cleanupFns = [];
+  currentContainer = null;
+}
 
-function attachEventListeners() {
-  const slider = document.getElementById('refresh-slider');
-  slider.addEventListener('input', (e) => {
-    document.getElementById('refresh-value').textContent = e.target.value + 's';
+function addScopedListener(el, event, handler) {
+  if (!el) return;
+  el.addEventListener(event, handler);
+  cleanupFns.push(() => el.removeEventListener(event, handler));
+}
+
+function applyThemeChoice(container, theme, notify = false) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('cybershield_theme', theme);
+
+  const darkBtn = container.querySelector('#btn-theme-dark');
+  const lightBtn = container.querySelector('#btn-theme-light');
+  if (darkBtn && lightBtn) {
+    if (theme === 'light') {
+      lightBtn.classList.add('btn-primary');
+      lightBtn.classList.remove('btn-secondary');
+      darkBtn.classList.add('btn-secondary');
+      darkBtn.classList.remove('btn-primary');
+    } else {
+      darkBtn.classList.add('btn-primary');
+      darkBtn.classList.remove('btn-secondary');
+      lightBtn.classList.add('btn-secondary');
+      lightBtn.classList.remove('btn-primary');
+    }
+  }
+
+  if (notify) {
+    showToast(`Theme switched to ${theme === 'light' ? 'Light' : 'Dark'} mode`, 'info');
+  }
+}
+
+function attachEventListeners(container) {
+  const slider = container.querySelector('#refresh-slider');
+  const refreshVal = container.querySelector('#refresh-value');
+  addScopedListener(slider, 'input', (e) => {
+    if (refreshVal) refreshVal.textContent = e.target.value + 's';
   });
 
-  document.getElementById('btn-theme-light').addEventListener('click', () => {
-    showToast('Light mode coming soon');
+  addScopedListener(container.querySelector('#btn-theme-dark'), 'click', () => {
+    applyThemeChoice(container, 'dark', true);
   });
 
-  document.getElementById('save-settings-btn').addEventListener('click', () => {
-    saveSettings();
+  addScopedListener(container.querySelector('#btn-theme-light'), 'click', () => {
+    applyThemeChoice(container, 'light', true);
+  });
+
+  addScopedListener(container.querySelector('#save-settings-btn'), 'click', () => {
+    saveSettings(container);
     showToast('Settings saved successfully');
   });
 
-  document.getElementById('reset-settings-btn').addEventListener('click', () => {
+  addScopedListener(container.querySelector('#reset-settings-btn'), 'click', () => {
     confirmModal('Reset Settings', 'Are you sure you want to revert to default settings?', () => {
       localStorage.removeItem('cybershield_settings');
-      loadSettings(); // re-applies defaults to UI
+      applyThemeChoice(container, 'dark', false);
+      loadSettings(container);
       showToast('Settings reset to defaults');
     });
   });
 }
 
-function saveSettings() {
+function saveSettings(container) {
   const settings = {
-    emailNotif: document.getElementById('set-email-notif').checked,
-    email: document.getElementById('set-email').value,
-    webhook: document.getElementById('set-webhook').value,
-    threshold: document.getElementById('set-threshold').value,
-    refresh: document.getElementById('refresh-slider').value,
-    maxLogs: document.getElementById('set-max-logs').value,
-    vulnInterval: document.getElementById('set-vuln-interval').value,
-    netDiscovery: document.getElementById('set-net-discovery').value,
-    portRange: document.getElementById('set-port-range').value,
-    apiPfsense: document.getElementById('set-pfsense').value,
-    apiPihole: document.getElementById('set-pihole').value,
-    apiWazuh: document.getElementById('set-wazuh').value,
-    suricataPath: document.getElementById('set-suricata').value,
+    emailNotif: container.querySelector('#set-email-notif').checked,
+    email: container.querySelector('#set-email').value,
+    webhook: container.querySelector('#set-webhook').value,
+    threshold: container.querySelector('#set-threshold').value,
+    refresh: container.querySelector('#refresh-slider').value,
+    maxLogs: container.querySelector('#set-max-logs').value,
+    vulnInterval: container.querySelector('#set-vuln-interval').value,
+    netDiscovery: container.querySelector('#set-net-discovery').value,
+    portRange: container.querySelector('#set-port-range').value,
+    apiPfsense: container.querySelector('#set-pfsense').value,
+    apiPihole: container.querySelector('#set-pihole').value,
+    apiWazuh: container.querySelector('#set-wazuh').value,
+    suricataPath: container.querySelector('#set-suricata').value,
   };
   localStorage.setItem('cybershield_settings', JSON.stringify(settings));
 }
 
-function loadSettings() {
+function loadSettings(container) {
   const defaults = {
     emailNotif: true, email: '', webhook: '', threshold: 'high',
     refresh: 5, maxLogs: '500', vulnInterval: '12', netDiscovery: '5',
@@ -202,21 +249,24 @@ function loadSettings() {
   const savedStr = localStorage.getItem('cybershield_settings');
   const settings = savedStr ? JSON.parse(savedStr) : defaults;
 
-  document.getElementById('set-email-notif').checked = settings.emailNotif;
-  document.getElementById('set-email').value = settings.email;
-  document.getElementById('set-webhook').value = settings.webhook;
-  document.getElementById('set-threshold').value = settings.threshold;
+  container.querySelector('#set-email-notif').checked = settings.emailNotif;
+  container.querySelector('#set-email').value = settings.email;
+  container.querySelector('#set-webhook').value = settings.webhook;
+  container.querySelector('#set-threshold').value = settings.threshold;
   
-  document.getElementById('refresh-slider').value = settings.refresh;
-  document.getElementById('refresh-value').textContent = settings.refresh + 's';
+  container.querySelector('#refresh-slider').value = settings.refresh;
+  container.querySelector('#refresh-value').textContent = settings.refresh + 's';
   
-  document.getElementById('set-max-logs').value = settings.maxLogs;
-  document.getElementById('set-vuln-interval').value = settings.vulnInterval;
-  document.getElementById('set-net-discovery').value = settings.netDiscovery;
-  document.getElementById('set-port-range').value = settings.portRange;
+  container.querySelector('#set-max-logs').value = settings.maxLogs;
+  container.querySelector('#set-vuln-interval').value = settings.vulnInterval;
+  container.querySelector('#set-net-discovery').value = settings.netDiscovery;
+  container.querySelector('#set-port-range').value = settings.portRange;
   
-  document.getElementById('set-pfsense').value = settings.apiPfsense;
-  document.getElementById('set-pihole').value = settings.apiPihole;
-  document.getElementById('set-wazuh').value = settings.apiWazuh;
-  document.getElementById('set-suricata').value = settings.suricataPath;
+  container.querySelector('#set-pfsense').value = settings.apiPfsense;
+  container.querySelector('#set-pihole').value = settings.apiPihole;
+  container.querySelector('#set-wazuh').value = settings.apiWazuh;
+  container.querySelector('#set-suricata').value = settings.suricataPath;
+
+  const currentTheme = localStorage.getItem('cybershield_theme') || document.documentElement.getAttribute('data-theme') || 'dark';
+  applyThemeChoice(container, currentTheme, false);
 }

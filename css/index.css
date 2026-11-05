@@ -23,6 +23,41 @@
   --transition-default: all 0.3s ease;
 }
 
+:root[data-theme="light"],
+body[data-theme="light"] {
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-sidebar: rgba(248, 250, 252, 0.95);
+  --border-card: rgba(2, 132, 199, 0.2);
+  --border-card-hover: rgba(2, 132, 199, 0.4);
+  --accent-cyan: #0284c7;
+  --accent-green: #16a34a;
+  --accent-red: #dc2626;
+  --accent-orange: #ea580c;
+  --accent-purple: #9333ea;
+  --accent-blue: #2563eb;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --shadow-glow: 0 4px 20px rgba(2, 132, 199, 0.12);
+  color-scheme: light;
+}
+
+:root[data-theme="light"] .header,
+body[data-theme="light"] .header {
+  background: rgba(241, 245, 249, 0.85);
+}
+
+.blink-colon {
+  animation: blink-colon 1s step-end infinite;
+}
+@keyframes blink-colon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -291,11 +326,17 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stat-card .stat-value {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stat-card .stat-trend {
   font-size: 0.8rem;
@@ -339,6 +380,10 @@ body {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   font-size: 0.875rem;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .data-table tr:hover td {
   background: rgba(0, 229, 255, 0.03);
@@ -472,6 +517,7 @@ dialog.glass-modal {
   padding: 0;
   max-width: 560px;
   width: 90%;
+  margin: auto;
   color: var(--text-primary);
 }
 dialog.glass-modal::backdrop {
@@ -668,6 +714,9 @@ dialog.glass-modal::backdrop {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Log entry */
