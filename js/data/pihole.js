@@ -21,11 +21,27 @@ export class PiholeClient {
   }
 
   async fetchEndpoint(path) {
-    const url = `${this.baseUrl}${path}`;
-    try {
-      const resp = await fetch(url, { headers: this.getHeaders() });
+    // Try local reverse proxy endpoint first (/api/pihole) to avoid CORS in remote browsers,
+    // otherwise fallback to direct baseUrl.
+    const isLocalServer = typeof window !== 'undefined' && (window.location.port === '8080' || window.location.hostname === 'localhost' || window.location.hostname === '100.114.224.85' || window.location.hostname === '192.168.1.221');
+    const proxyUrl = `/api/pihole${path}`;
+    const directUrl = `${this.baseUrl}${path}`;
+
+    const tryFetch = async (targetUrl) => {
+      const resp = await fetch(targetUrl, { headers: this.getHeaders() });
       if (!resp.ok) return null;
       return await resp.json();
+    };
+
+    if (isLocalServer) {
+      try {
+        const data = await tryFetch(proxyUrl);
+        if (data && !data.error) return data;
+      } catch (e) {}
+    }
+
+    try {
+      return await tryFetch(directUrl);
     } catch (err) {
       return null;
     }
