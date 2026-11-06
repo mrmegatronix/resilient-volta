@@ -9,8 +9,8 @@ export const store = {
     rules: [],
     firewallRules: [],
     vulnerabilities: [],
-    metrics: { cpu: 0, ram: 0, disk: 0, cpuTemp: 45, networkIn: 0, networkOut: 0, processes: 120 },
-    systemMetrics: { cpu: 0, ram: 0, disk: 0, cpuTemp: 45, networkIn: 0, networkOut: 0, processes: 120 },
+    metrics: { cpu: 0, ram: 0, disk: 0, cpuTemp: 0, networkIn: 0, networkOut: 0, processes: 0 },
+    systemMetrics: { cpu: 0, ram: 0, disk: 0, cpuTemp: 0, networkIn: 0, networkOut: 0, processes: 0 },
     notifications: []
   },
   _listeners: {},

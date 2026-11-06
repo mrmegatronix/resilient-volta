@@ -18,7 +18,7 @@ export function render(container) {
             <span class="stat-title"><i class="icon-shield"></i> Threats Blocked</span>
           </div>
           <div class="stat-value" id="dash-threats-val">0</div>
-          <div class="stat-trend up">+12%</div>
+          <div class="stat-trend">0%</div>
           <canvas class="stat-sparkline" id="spark-threats"></canvas>
         </div>
         <div class="glass-card stat-card">
@@ -26,7 +26,7 @@ export function render(container) {
             <span class="stat-title"><i class="icon-monitor"></i> Active Devices</span>
           </div>
           <div class="stat-value" id="dash-devices-val">0</div>
-          <div class="stat-trend up">+2%</div>
+          <div class="stat-trend">0%</div>
           <canvas class="stat-sparkline" id="spark-devices"></canvas>
         </div>
         <div class="glass-card stat-card">
@@ -34,15 +34,15 @@ export function render(container) {
             <span class="stat-title"><i class="icon-brick-wall"></i> Firewall Rules</span>
           </div>
           <div class="stat-value" id="dash-rules-val">0</div>
-          <div class="stat-trend">+0%</div>
+          <div class="stat-trend">0%</div>
           <canvas class="stat-sparkline" id="spark-rules"></canvas>
         </div>
         <div class="glass-card stat-card">
           <div class="stat-header">
             <span class="stat-title"><i class="icon-clock"></i> Uptime</span>
           </div>
-          <div class="stat-value">99.97%</div>
-          <div class="stat-trend up">+0.01%</div>
+          <div class="stat-value" id="dash-uptime-val">N/A</div>
+          <div class="stat-trend">0%</div>
           <canvas class="stat-sparkline" id="spark-uptime"></canvas>
         </div>
       </div>
@@ -163,10 +163,10 @@ function initCharts() {
     chartInstances.push(createDonutChart(donutCtx, []));
   }
 
-  sparklineInstances.push(createSparkline(document.getElementById('spark-threats'), [10, 15, 8, 20, 25, 12, 18], 'var(--accent-red)'));
-  sparklineInstances.push(createSparkline(document.getElementById('spark-devices'), [40, 42, 41, 45, 45, 46, 48], 'var(--accent-green)'));
-  sparklineInstances.push(createSparkline(document.getElementById('spark-rules'), [100, 100, 101, 101, 102, 102, 105], 'var(--accent-cyan)'));
-  sparklineInstances.push(createSparkline(document.getElementById('spark-uptime'), [99, 99.5, 99.9, 99.8, 99.9, 100, 99.97], 'var(--accent-purple)'));
+  sparklineInstances.push(createSparkline(document.getElementById('spark-threats'), [0, 0, 0, 0, 0, 0, 0], 'var(--accent-red)'));
+  sparklineInstances.push(createSparkline(document.getElementById('spark-devices'), [0, 0, 0, 0, 0, 0, 0], 'var(--accent-green)'));
+  sparklineInstances.push(createSparkline(document.getElementById('spark-rules'), [0, 0, 0, 0, 0, 0, 0], 'var(--accent-cyan)'));
+  sparklineInstances.push(createSparkline(document.getElementById('spark-uptime'), [0, 0, 0, 0, 0, 0, 0], 'var(--accent-purple)'));
 
   gauges.cpu = createGauge(document.getElementById('gauge-cpu'), 0, 100, 'CPU', 'var(--accent-cyan)');
   gauges.ram = createGauge(document.getElementById('gauge-ram'), 0, 100, 'RAM', 'var(--accent-purple)');
@@ -263,11 +263,16 @@ function updateTraffic(data) {
       outbound = outbound.slice(-36);
     } else if (currentRange === '7d') {
       labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      const avgIn = inbound.length ? inbound.reduce((a, b) => a + b, 0) / inbound.length : 200;
-      const avgOut = outbound.length ? outbound.reduce((a, b) => a + b, 0) / outbound.length : 90;
-      const dayFactors = [0.92, 1.05, 1.12, 1.08, 1.15, 0.78, 0.72];
-      inbound = dayFactors.map(f => Math.round(avgIn * f));
-      outbound = dayFactors.map(f => Math.round(avgOut * f));
+      if (inbound.length === 0 && outbound.length === 0) {
+        inbound = [0, 0, 0, 0, 0, 0, 0];
+        outbound = [0, 0, 0, 0, 0, 0, 0];
+      } else {
+        const avgIn = inbound.length ? inbound.reduce((a, b) => a + b, 0) / inbound.length : 0;
+        const avgOut = outbound.length ? outbound.reduce((a, b) => a + b, 0) / outbound.length : 0;
+        const dayFactors = [1, 1, 1, 1, 1, 1, 1];
+        inbound = dayFactors.map(f => Math.round(avgIn * f));
+        outbound = dayFactors.map(f => Math.round(avgOut * f));
+      }
     }
 
     chart.data.labels = labels;
@@ -300,14 +305,5 @@ function updateMetrics(metrics) {
 }
 
 function updateSparklines() {
-  sparklineInstances.forEach(chart => {
-    if (chart && chart.data && chart.data.datasets[0]) {
-      const data = chart.data.datasets[0].data;
-      if (data && data.length > 0) {
-        data.shift();
-        data.push(Math.max(0, data[data.length - 1] + (Math.random() * 10 - 5)));
-        chart.update();
-      }
-    }
-  });
+  // No random walk when mock data is removed
 }
