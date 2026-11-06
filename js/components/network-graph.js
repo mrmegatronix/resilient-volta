@@ -30,10 +30,12 @@ export function createNetworkGraph(canvasElement, initialDevicesOrHandler = [], 
     
     let routerNode = null;
     
-    nodes = (devices || []).map(d => {
+    nodes = (devices || []).map((d, index) => {
       const typeKey = (d.type || '').toLowerCase();
       const radius = rings[typeKey] !== undefined ? rings[typeKey] : 200;
-      const angle = Math.random() * Math.PI * 2;
+      const countForType = (devices || []).filter(item => (item.type || '').toLowerCase() === typeKey).length || 1;
+      const typeIndex = (devices || []).filter((item, idx) => idx <= index && (item.type || '').toLowerCase() === typeKey).length - 1;
+      const angle = (typeIndex / countForType) * Math.PI * 2;
       const x = cx + Math.cos(angle) * radius;
       const y = cy + Math.sin(angle) * radius;
       
@@ -53,7 +55,7 @@ export function createNetworkGraph(canvasElement, initialDevicesOrHandler = [], 
     if (routerNode) {
       nodes.forEach(n => {
         if (n !== routerNode) {
-          edges.push({ source: n, target: routerNode, traffic: Math.random() });
+          edges.push({ source: n, target: routerNode, traffic: (n.riskScore || 0) > 50 ? 1 : 0 });
         }
       });
     }
