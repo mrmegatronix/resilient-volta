@@ -1,5 +1,6 @@
 import { store } from './data/store.js';
 import { startLiveSimulation } from './data/simulator.js';
+import { pihole } from './data/pihole.js';
 import { showToast } from './components/toast.js';
 import { showModal } from './components/modal.js';
 
@@ -245,6 +246,9 @@ function initApp() {
   // Start simulator first to populate store state
   startLiveSimulation(store);
   updateNotificationBadge(store.get('threats'));
+
+  // Start real Pi-hole synchronization
+  pihole.startPolling(5000);
 
   // Setup router
   window.addEventListener('hashchange', handleRoute);

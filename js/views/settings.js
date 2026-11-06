@@ -207,7 +207,12 @@ function attachEventListeners(container) {
 
   addScopedListener(container.querySelector('#save-settings-btn'), 'click', () => {
     saveSettings(container);
-    showToast('Settings saved successfully');
+    import('../data/pihole.js').then(({ pihole }) => {
+      const piholeUrl = container.querySelector('#set-pihole')?.value || 'http://192.168.1.253';
+      pihole.setCredentials(piholeUrl);
+      pihole.syncAll();
+    });
+    showToast('Settings saved successfully and Pi-hole synced');
   });
 
   addScopedListener(container.querySelector('#reset-settings-btn'), 'click', () => {
@@ -243,7 +248,7 @@ function loadSettings(container) {
   const defaults = {
     emailNotif: true, email: '', webhook: '', threshold: 'high',
     refresh: 5, maxLogs: '500', vulnInterval: '12', netDiscovery: '5',
-    portRange: '1-1024', apiPfsense: '', apiPihole: '', apiWazuh: '', suricataPath: ''
+    portRange: '1-1024', apiPfsense: '', apiPihole: 'http://192.168.1.253', apiWazuh: '', suricataPath: ''
   };
   
   const savedStr = localStorage.getItem('cybershield_settings');
